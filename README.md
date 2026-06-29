@@ -1,1 +1,1 @@
-I like your architectural idea. I understand why you separated the code into different layers. However, Ansible has a limitation. The retries and until features only work inside a single task. They cannot be used across roles. To make your design work, you would need a manual loop, which makes the code more complicated and slower. Keeping the HTTP request in the current role is the simpler and more practical solution.
+
