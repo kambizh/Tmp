@@ -1,1 +1,5 @@
-Lionel’s support and encouragement help me stay motivated and focused on contributing to the team’s priorities. He considers my wellbeing and avoids unnecessary overtime pressure, helping me maintain a sustainable pace of work. I value his supportive approach and the confidence it gives me in my day-to-day work.
+Hi Federico, I’m a Senior Software Engineer in Automation Enablement & Acceleration, with around 20 years of engineering experience. My current work spans API Gateway onboarding, Kubernetes, Terraform and AAP.
+
+I’d like to contribute an AI support-engineer use case that combines code and documentation with Kubernetes logs, metrics and events to investigate production tickets, debug failures and recommend evidence-backed actions, with human approval for changes.
+
+Agent Rails aligns closely with my interest in agent integration, observability and governance. I’m keen to build reusable capabilities with other teams and would aim to commit four hours per week, coordinated with my manager.
