@@ -1,20 +1,88 @@
-Our existing RBAC model assigns permissions based on Tech Asset IDs. Each technical asset has its own teams and access permissions in TFE.
+## A Run Provisions One Cluster – Original Design
 
-In RSA, one cluster contains four different Tech Asset IDs: ZooKeeper, Broker, Manager and CPUI.
+In the original design, each generic workflow run provisions and configures an entire cluster, such as APIGW or RSA, including all associated components.
 
-If we provision all four through one TFE workspace, they share the same workspace-level access controls.
+For RSA, a single cluster contains multiple technical assets, including ZooKeeper, Broker, Manager, and CPUI, each with its own Tech Asset ID.
 
-The problem is that TFE RBAC cannot independently restrict access to individual Terraform resources within that shared workspace.
+The original workflow consists of:
 
-For example, if the ZooKeeper team has permission to apply Terraform changes in that workspace, they could potentially modify Broker or Manager resources as well.
+1. Load customer profile and validate inputs.
+2. Provision all cluster components through Terraform.
+3. Perform Chef registration, definition, and convergence.
+4. Validate the provisioned VMs.
+5. Generate the deployment report.
 
-This breaks the access isolation we're trying to maintain between technical assets.
-n Option 2, we provision each technical asset separately to preserve the existing RBAC boundaries.
+### RBAC Limitation
 
-However, all these assets are part of the same RSA cluster, so we still need NaaS to establish connectivity between them.
+Our existing Terraform Enterprise (TFE) RBAC model assigns teams and permissions based on individual Tech Asset IDs.
 
-My proposal is to manage that at the parent workflow level. Once the individual components are provisioned, we collect their network information and invoke NaaS to configure the connectivity.
+Provisioning all RSA components through a single TFE workspace would place multiple technical assets within the same workspace-level authorization boundary.
 
-This allows us to keep Terraform permissions separate while managing network connectivity at the cluster level.
+Since TFE RBAC does not independently restrict access to individual Terraform resources within a shared workspace, users authorized to manage one technical asset could potentially affect resources belonging to another.
 
-The remaining point to confirm is whether NaaS can provision connectivity across multiple Tech Asset IDs using its own authorized workspace and token.
+For example, a ZooKeeper team member with Terraform apply permissions on the shared workspace could potentially modify Broker or Manager resources.
+
+This creates an access-isolation concern and could require changes to the existing RBAC model.
+
+## Proposed Solution – Option 2: Component-Level Provisioning with Cluster-Level Orchestration
+
+To preserve the existing RBAC model, Option 2 separates technical asset provisioning while retaining a single coordinated RSA cluster deployment.
+
+Each technical asset runs through the same reusable generic workflow using its own TFE workspace and corresponding RBAC permissions.
+
+A parent workflow coordinates the component runs and manages the overall cluster deployment.
+
+### Proposed Workflow
+
+**1. Component Provisioning**
+
+The parent workflow triggers a generic workflow run for each technical asset, such as ZooKeeper, Broker, Manager, and CPUI.
+
+Each component workflow performs:
+
+- Customer profile loading and input validation.
+- Terraform VM provisioning and initial NaaS configuration (`observe = false`).
+- Chef registration, definition, and convergence.
+
+The initial NaaS configuration must provide the baseline network connectivity required for Chef and other platform services.
+
+**2. Collect Component Results**
+
+Once the component workflows complete successfully, the parent workflow collects their provisioning results, including VM information and network details, from the workflow state stored in S3.
+
+**3. Cluster-Level NaaS Connectivity**
+
+The parent workflow invokes Terraform NaaS connectivity policy enforcement (`observe = true`) to establish the required connectivity between RSA components.
+
+This stage must preserve the baseline network access established during component provisioning.
+
+**4. Post-NaaS Validation**
+
+After network policy enforcement, the parent workflow performs:
+
+- Chef convergence validation to confirm that required platform connectivity remains available.
+- RSA cluster validation to verify connectivity and application readiness.
+- Definition of Done (DoD) validation before completing the deployment.
+
+### Benefits
+
+- **RBAC isolation:** Each technical asset maintains its own TFE workspace and access permissions.
+- **Reusable workflow:** The same generic workflow supports different technical asset types.
+- **Cluster-level orchestration:** Multiple independently provisioned technical assets are delivered as one RSA cluster.
+- **Reduced RBAC impact:** Avoids redesigning the existing tech-asset-based RBAC model.
+- **Clear ownership:** Component provisioning and cluster-level connectivity are managed separately.
+
+### Open Design Considerations
+
+The following points require confirmation before implementation:
+
+1. Whether NaaS supports connectivity policy enforcement across multiple Tech Asset IDs using an appropriately authorized TFE workspace and token.
+2. Whether `observe = true` enforces the intended connectivity policies and preserves the baseline network access.
+3. Whether the parent workflow can coordinate component dependencies, failures, retries, and recovery.
+4. Whether Chef convergence requires any cross-component connectivity before the cluster-level NaaS stage.
+
+### Recommendation
+
+Proceed with **Option 2: Component-Level Provisioning with Cluster-Level Orchestration**, subject to confirming the NaaS authorization and connectivity requirements.
+
+This approach preserves the existing TFE RBAC boundaries while supporting RSA clusters containing multiple technical assets.
