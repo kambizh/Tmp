@@ -86,3 +86,9 @@ The following points require confirmation before implementation:
 Proceed with **Option 2: Component-Level Provisioning with Cluster-Level Orchestration**, subject to confirming the NaaS authorization and connectivity requirements.
 
 This approach preserves the existing TFE RBAC boundaries while supporting RSA clusters containing multiple technical assets.
+
+
+
+### Proposed Solution – Option 2: Component-Level Provisioning with Cluster-Level Orchestration
+
+To address the RBAC limitation, Option 2 proposes provisioning each technical asset separately using the same reusable generic workflow, with its own TFE workspace and RBAC permissions. A parent workflow coordinates all component runs to deliver a single RSA cluster. Each component workflow handles Terraform provisioning, initial NaaS configuration, and Chef convergence. Once all components are provisioned, the parent workflow collects their outputs, invokes NaaS to establish connectivity between the technical assets, and performs final Chef and cluster validation. This approach preserves the existing RBAC model while allowing multiple technical assets to operate together as one cluster, subject to confirming that NaaS supports cross-asset connectivity.
